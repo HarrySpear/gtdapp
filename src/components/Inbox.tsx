@@ -227,6 +227,28 @@ export default function Inbox() {
           <div className="ticks-empty" aria-hidden="true" />
         )}
 
+      </header>
+
+      {/* Capture and view switching stay pinned; the count scrolls away. */}
+      <div className="bar">
+        <div className="capture">
+          <span className="caret" aria-hidden="true">
+            ▸
+          </span>
+          <input
+            ref={captureRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && capture()}
+            placeholder="What's on your mind?"
+            enterKeyHint="done"
+            autoComplete="off"
+            autoCapitalize="sentences"
+            aria-label="Capture an item"
+          />
+          <span className="hint">RETURN</span>
+        </div>
+
         <nav className="tabs">
           {VIEWS.map((v) => (
             <button
@@ -245,24 +267,6 @@ export default function Inbox() {
             </button>
           ))}
         </nav>
-      </header>
-
-      <div className="capture">
-        <span className="caret" aria-hidden="true">
-          ▸
-        </span>
-        <input
-          ref={captureRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && capture()}
-          placeholder="What's on your mind?"
-          enterKeyHint="done"
-          autoComplete="off"
-          autoCapitalize="sentences"
-          aria-label="Capture an item"
-        />
-        <span className="hint">RETURN</span>
       </div>
 
       {error && <div className="notice">Couldn't reach the database: {error}</div>}
