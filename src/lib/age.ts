@@ -21,3 +21,33 @@ export function ageLabel(createdAt: string, now = Date.now()): string {
 export function staleness(createdAt: string, now = Date.now()): number {
   return Math.min(1, hoursOld(createdAt, now) / (24 * 14))
 }
+
+/** Local calendar day, used to group completion history. */
+export function dayKey(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+/** Today / Yesterday / Mon 4 Aug. */
+export function dayLabel(iso: string, now = Date.now()): string {
+  const d = new Date(iso)
+  const today = new Date(now)
+  const yesterday = new Date(now - DAY)
+
+  if (dayKey(iso) === dayKey(today.toISOString())) return 'Today'
+  if (dayKey(iso) === dayKey(yesterday.toISOString())) return 'Yesterday'
+
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+/** 14:32 */
+export function clockLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
