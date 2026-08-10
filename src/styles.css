@@ -75,7 +75,7 @@ textarea {
 /* ---------- masthead ---------- */
 
 .masthead {
-  padding: 12px 0 18px;
+  padding: 8px 0 4px;
 }
 
 .eyebrow {
@@ -104,7 +104,7 @@ textarea {
 .count {
   font-family: var(--mono);
   font-weight: 500;
-  font-size: clamp(56px, 18vw, 88px);
+  font-size: clamp(44px, 14vw, 88px);
   line-height: 0.92;
   letter-spacing: -0.04em;
   margin: 10px 0 0;
@@ -145,24 +145,31 @@ textarea {
 
 /* ---------- capture ---------- */
 
-.capture {
+/* Pinned strip: capture + view tabs. Stays reachable at any scroll depth. */
+.bar {
   position: sticky;
-  top: env(safe-area-inset-top, 0px);
+  top: 0;
   z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 0;
   background: var(--paper);
   border-bottom: 1px solid var(--ink);
 }
 
-.capture::before {
+/* Bleed the background across the shell's gutters so rows don't show through
+   at the edges as they scroll under. No upward bleed — that would cover the
+   masthead. */
+.bar::before {
   content: '';
   position: absolute;
-  inset: -140px calc(var(--pad) * -1) 0;
+  inset: 0 calc(var(--pad) * -1);
   background: var(--paper);
   z-index: -1;
+}
+
+.capture {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0 12px;
 }
 
 .caret {
@@ -364,7 +371,7 @@ textarea {
 .tabs {
   display: flex;
   gap: 18px;
-  margin-top: 16px;
+  padding-bottom: 2px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -421,10 +428,11 @@ textarea {
   flex: none;
   font-family: var(--mono);
   font-size: 15px;
-  line-height: 1.2;
+  line-height: 1;
   color: var(--muted);
-  padding: 2px 4px;
-  margin: -2px -4px 0 0;
+  min-width: 40px;
+  min-height: 40px;
+  margin: -10px -12px 0 0;
   transition: color 140ms ease;
 }
 
