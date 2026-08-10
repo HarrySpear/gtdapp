@@ -13,9 +13,16 @@ export const supabase = createClient(url, anonKey, {
   auth: { persistSession: true, autoRefreshToken: true },
 })
 
+export const STATUSES = ['inbox', 'next', 'waiting', 'someday', 'done'] as const
+export type Status = (typeof STATUSES)[number]
+
 export type Item = {
   id: string
   title: string
-  status: string
+  next_action: string | null
+  status: Status
   created_at: string
+  completed_at: string | null
 }
+
+export const ITEM_COLUMNS = 'id, title, next_action, status, created_at, completed_at'
