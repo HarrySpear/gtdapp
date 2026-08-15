@@ -1028,12 +1028,19 @@ textarea {
   max-width: 22ch;
 }
 
+/* Email then password, stacked; only the last field gets the heavy rule. */
 .gate-field {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
   padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+
+.gate-field-last {
+  border-bottom-color: var(--ink);
+  margin-bottom: 0;
 }
 
 .gate-field input {

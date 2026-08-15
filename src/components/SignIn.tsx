@@ -3,53 +3,53 @@ import { supabase } from '../lib/supabase'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function send() {
-    if (!email.includes('@') || state === 'sending') return
-    setState('sending')
+  async function signIn() {
+    if (busy || !email || !password) return
+    setBusy(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    })
-    if (error) {
-      setError(error.message)
-      setState('idle')
-    } else {
-      setState('sent')
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setError(error.message)
+    setBusy(false)
   }
 
   return (
     <div className="gate">
-      <h1>Inbox</h1>
+      <h1>Getting things done</h1>
       <p>Capture first, sort later.</p>
 
       <div className="gate-field">
         <input
           type="email"
           inputMode="email"
-          autoComplete="email"
+          autoComplete="username"
           autoCapitalize="off"
-          placeholder="you@example.com"
+          autoCorrect="off"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-          disabled={state === 'sent'}
           aria-label="Email address"
         />
-        <button className="gate-send" onClick={send} disabled={state !== 'idle'}>
-          {state === 'sending' ? 'Sending' : 'Send link'}
+      </div>
+
+      <div className="gate-field gate-field-last">
+        <input
+          type="password"
+          autoComplete="current-password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && signIn()}
+          aria-label="Password"
+        />
+        <button className="gate-send" onClick={signIn} disabled={busy}>
+          {busy ? 'Checking' : 'Sign in'}
         </button>
       </div>
 
-      {state === 'sent' && (
-        <p className="gate-msg">
-          Link sent to {email}. Open it on this device to finish signing in.
-        </p>
-      )}
       {error && <div className="notice">{error}</div>}
     </div>
   )
