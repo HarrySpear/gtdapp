@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useGtd } from '../lib/store'
 import { isStalled, REVIEW_DUE_DAYS } from '../lib/gtd'
@@ -24,15 +24,33 @@ const TABS: { id: Tab; label: string }[] = [
  * you look at what to do about it. Someday/maybe has no tab — it is a parking
  * bay, and the weekly review is the only place it should interrupt you.
  */
+/** The tab lives in the URL so a calendar reminder can link straight to it. */
+function tabFromHash(): Tab {
+  const hash = window.location.hash.replace(/^#/, '')
+  return TABS.some((t) => t.id === hash) ? (hash as Tab) : 'projects'
+}
+
 export default function Shell() {
   const gtd = useGtd()
-  const [tab, setTab] = useState<Tab>('projects')
+  const [tab, setTab] = useState<Tab>(tabFromHash)
   const [now, setNow] = useState(() => Date.now())
 
   // Ages are load-bearing on the inbox screen, so keep them moving.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(t)
+  }, [])
+
+  // Back/forward and inbound links both arrive as a hash change.
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  const go = useCallback((next: Tab) => {
+    setTab(next)
+    if (tabFromHash() !== next) window.location.hash = next
   }, [])
 
   const today = todayISO()
@@ -69,7 +87,7 @@ export default function Shell() {
             className="tab"
             data-on={tab === t.id}
             aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => go(t.id)}
           >
             {t.label}
             {counts[t.id] > 0 && <span className="tab-count">{counts[t.id]}</span>}
@@ -89,7 +107,7 @@ export default function Shell() {
       {tab === 'next' && <NextTab gtd={gtd} />}
       {tab === 'waiting' && <WaitingTab gtd={gtd} />}
       {tab === 'inbox' && <InboxTab gtd={gtd} now={now} />}
-      {tab === 'review' && <ReviewTab gtd={gtd} onGo={setTab} />}
+      {tab === 'review' && <ReviewTab gtd={gtd} onGo={go} />}
     </div>
   )
 }

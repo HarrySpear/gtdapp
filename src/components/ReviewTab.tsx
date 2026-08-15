@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import type { Gtd } from '../lib/store'
 import type { Tab } from './Shell'
-import { isStalled, REVIEW_DUE_DAYS } from '../lib/gtd'
+import { reviewSummary, CHASE_AFTER_DAYS, HORIZON_DAYS } from '../lib/gtd'
 import { daysOld, daysUntil, dueLabel, todayISO } from '../lib/age'
-
-const CHASE_AFTER_DAYS = 14
-const HORIZON_DAYS = 7
+import ReviewReminder from './ReviewReminder'
 
 /**
  * The weekly review — the habit the whole system rests on. Rather than a
@@ -15,48 +13,29 @@ const HORIZON_DAYS = 7
 export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => void }) {
   const [justLogged, setJustLogged] = useState(false)
   const today = todayISO()
-
-  const inbox = gtd.items.filter((i) => i.status === 'inbox')
-  const stalled = gtd.projects.filter((p) => isStalled(gtd.items, p))
-  const chase = gtd.items.filter(
-    (i) => i.status === 'waiting' && daysOld(i.created_at) >= CHASE_AFTER_DAYS,
-  )
-  const parkedItems = gtd.items.filter((i) => i.status === 'someday')
-  const parkedProjects = gtd.projects.filter((p) => p.status === 'someday')
-  const soon = gtd.items
-    .filter(
-      (i) =>
-        (i.status === 'next' || i.status === 'waiting') &&
-        i.due_date &&
-        daysUntil(i.due_date, today) <= HORIZON_DAYS,
-    )
-    .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
-
-  const since = gtd.lastReview ? daysOld(gtd.lastReview) : null
-  const overdue = since === null || since >= REVIEW_DUE_DAYS
-  const allClear = inbox.length === 0 && stalled.length === 0 && chase.length === 0
+  const s = reviewSummary(gtd.items, gtd.projects, gtd.lastReview, today)
 
   return (
     <>
       <div className="masthead">
-        <div className="count" data-empty={!overdue}>
-          {since === null ? '—' : since}
+        <div className="count" data-empty={!s.overdue}>
+          {s.daysSince === null ? '—' : s.daysSince}
         </div>
         <p className="review-since">
-          {since === null
+          {s.daysSince === null
             ? 'You have never logged a review. Start now; it takes half an hour.'
             : `days since your last review. ${
-                overdue ? 'Overdue — the lists are drifting.' : 'Still fresh.'
+                s.overdue ? 'Overdue — the lists are drifting.' : 'Still fresh.'
               }`}
         </p>
       </div>
 
-      <Step n={1} label="Empty the inbox" clear={inbox.length === 0}>
-        {inbox.length > 0 ? (
+      <Step n={1} label="Empty the inbox" clear={s.inbox.length === 0}>
+        {s.inbox.length > 0 ? (
           <>
             <p>
-              {inbox.length} captured thought{inbox.length > 1 ? 's have' : ' has'} not
-              been decided on.
+              {s.inbox.length} captured thought{s.inbox.length > 1 ? 's have' : ' has'}{' '}
+              not been decided on.
             </p>
             <button className="pill pill-go" onClick={() => onGo('inbox')}>
               process them →
@@ -67,12 +46,12 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
         )}
       </Step>
 
-      <Step n={2} label="Every project has a next action" clear={stalled.length === 0}>
-        {stalled.length > 0 ? (
+      <Step n={2} label="Every project has a next action" clear={s.stalled.length === 0}>
+        {s.stalled.length > 0 ? (
           <>
             <p>These have nothing to do next:</p>
             <ul className="review-list">
-              {stalled.map((p) => (
+              {s.stalled.map((p) => (
                 <StalledProject key={p.id} name={p.name} id={p.id} gtd={gtd} />
               ))}
             </ul>
@@ -82,12 +61,12 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
         )}
       </Step>
 
-      <Step n={3} label="Chase the waiting-fors" clear={chase.length === 0}>
-        {chase.length > 0 ? (
+      <Step n={3} label="Chase the waiting-fors" clear={s.chase.length === 0}>
+        {s.chase.length > 0 ? (
           <>
             <p>Handed off over {CHASE_AFTER_DAYS} days ago and still open:</p>
             <ul className="review-list">
-              {chase.map((i) => (
+              {s.chase.map((i) => (
                 <li key={i.id}>
                   <span>
                     {i.waiting_on} — {i.title}
@@ -108,14 +87,14 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
       <Step
         n={4}
         label="Revisit someday / maybe"
-        clear={parkedItems.length + parkedProjects.length === 0}
+        clear={s.parkedItems.length + s.parkedProjects.length === 0}
         optional
       >
-        {parkedItems.length + parkedProjects.length > 0 ? (
+        {s.parkedItems.length + s.parkedProjects.length > 0 ? (
           <>
             <p>Parked. Is now the time for any of these?</p>
             <ul className="review-list">
-              {parkedProjects.map((p) => (
+              {s.parkedProjects.map((p) => (
                 <li key={p.id}>
                   <span>{p.name}</span>
                   <button
@@ -126,7 +105,7 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
                   </button>
                 </li>
               ))}
-              {parkedItems.map((i) => (
+              {s.parkedItems.map((i) => (
                 <li key={i.id}>
                   <span>{i.title}</span>
                   <span className="review-pair">
@@ -153,12 +132,15 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
       </Step>
 
       <Step n={5} label="Look at the week ahead" clear optional>
-        {soon.length > 0 ? (
+        {s.soon.length > 0 ? (
           <ul className="review-list">
-            {soon.map((i) => (
+            {s.soon.map((i) => (
               <li key={i.id}>
                 <span>{i.title}</span>
-                <span className="review-age" data-tone={daysUntil(i.due_date!, today) < 0 ? 'late' : undefined}>
+                <span
+                  className="review-age"
+                  data-tone={daysUntil(i.due_date!, today) < 0 ? 'late' : undefined}
+                >
                   {dueLabel(i.due_date!, today)}
                 </span>
               </li>
@@ -182,7 +164,7 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
             >
               mark this review complete
             </button>
-            {!allClear && (
+            {!s.allClear && (
               <p className="review-warn">
                 Steps 1–3 are not clear yet. You can log it anyway — just know what you
                 are signing off.
@@ -191,6 +173,8 @@ export default function ReviewTab({ gtd, onGo }: { gtd: Gtd; onGo: (t: Tab) => v
           </>
         )}
       </div>
+
+      <ReviewReminder summary={s} />
     </>
   )
 }

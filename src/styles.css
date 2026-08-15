@@ -846,6 +846,57 @@ textarea {
   color: var(--go);
 }
 
+/* ---------- weekly reminder ---------- */
+
+.reminder {
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+
+.reminder-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 14px 0;
+}
+
+.reminder-preview {
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--paper-raised);
+  border-left: 2px solid var(--rule);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.reminder-preview p {
+  margin: 8px 0 6px;
+}
+
+.reminder-preview ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink);
+}
+
+.reminder-when {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.reminder-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 46ch;
+}
+
 /* ---------- clarify ---------- */
 
 .clarify {
