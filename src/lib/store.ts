@@ -3,9 +3,13 @@ import {
   supabase,
   ITEM_COLS,
   PROJECT_COLS,
+  GOAL_COLS,
+  type Goal,
+  type Horizon,
   type Item,
   type Project,
 } from './supabase'
+import { targetDateFor } from './gtd'
 
 /** Completed work stays visible for a week, then stops taking up room. */
 const KEEP_DONE_DAYS = 7
@@ -15,6 +19,7 @@ export type Gtd = ReturnType<typeof useGtd>
 export function useGtd() {
   const [items, setItems] = useState<Item[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [lastReview, setLastReview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +29,7 @@ export function useGtd() {
       Date.now() - KEEP_DONE_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString()
 
-    const [i, p, r] = await Promise.all([
+    const [i, p, g, r] = await Promise.all([
       supabase
         .from('items')
         .select(ITEM_COLS)
@@ -35,18 +40,23 @@ export function useGtd() {
         .select(PROJECT_COLS)
         .order('created_at', { ascending: false }),
       supabase
+        .from('goals')
+        .select(GOAL_COLS)
+        .order('target_date', { ascending: true, nullsFirst: false }),
+      supabase
         .from('reviews')
         .select('completed_at')
         .order('completed_at', { ascending: false })
         .limit(1),
     ])
 
-    const failed = i.error ?? p.error ?? r.error
+    const failed = i.error ?? p.error ?? g.error ?? r.error
     if (failed) {
       setError(failed.message)
     } else {
       setItems(i.data as Item[])
       setProjects(p.data as Project[])
+      setGoals(g.data as Goal[])
       setLastReview(r.data?.[0]?.completed_at ?? null)
       setError(null)
     }
@@ -236,6 +246,57 @@ export function useGtd() {
     [createProject, deleteItem],
   )
 
+  /* ------------------------------------------------------------- goals -- */
+
+  const createGoal = useCallback(async (name: string, horizon: Horizon) => {
+    const clean = name.trim()
+    if (!clean) return null
+
+    const { data, error } = await supabase
+      .from('goals')
+      .insert({ name: clean, horizon, target_date: targetDateFor(horizon) })
+      .select(GOAL_COLS)
+      .single()
+
+    if (error) {
+      setError(error.message)
+      return null
+    }
+    setGoals((prev) => [...prev, data as Goal])
+    setError(null)
+    return data as Goal
+  }, [])
+
+  const updateGoal = useCallback(
+    (id: string, patch: Partial<Goal>) =>
+      write(
+        () => setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g))),
+        goals,
+        setGoals,
+        () => supabase.from('goals').update(patch).eq('id', id),
+      ),
+    [goals, write],
+  )
+
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      const ok = await write(
+        () => setGoals((prev) => prev.filter((g) => g.id !== id)),
+        goals,
+        setGoals,
+        () => supabase.from('goals').delete().eq('id', id),
+      )
+      // ON DELETE SET NULL: the projects survive, just unaligned.
+      if (ok) {
+        setProjects((prev) =>
+          prev.map((p) => (p.goal_id === id ? { ...p, goal_id: null } : p)),
+        )
+      }
+      return ok
+    },
+    [goals, write],
+  )
+
   /* ----------------------------------------------------------- reviews -- */
 
   const logReview = useCallback(async () => {
@@ -257,6 +318,7 @@ export function useGtd() {
   return {
     items,
     projects,
+    goals,
     lastReview,
     loading,
     error,
@@ -271,6 +333,9 @@ export function useGtd() {
     updateProject,
     deleteProject,
     promoteToProject,
+    createGoal,
+    updateGoal,
+    deleteGoal,
     logReview,
   }
 }

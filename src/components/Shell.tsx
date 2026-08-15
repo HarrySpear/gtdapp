@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useGtd } from '../lib/store'
-import { isStalled, REVIEW_DUE_DAYS } from '../lib/gtd'
+import { isStalled, isGoalStalled, goalNeedsReview, REVIEW_DUE_DAYS } from '../lib/gtd'
 import { daysOld, daysUntil, todayISO } from '../lib/age'
 import ProjectsTab from './ProjectsTab'
 import NextTab from './NextTab'
 import WaitingTab from './WaitingTab'
 import InboxTab from './InboxTab'
+import GoalsTab from './GoalsTab'
 import ReviewTab from './ReviewTab'
 
-export type Tab = 'projects' | 'next' | 'waiting' | 'inbox' | 'review'
+export type Tab = 'projects' | 'next' | 'waiting' | 'inbox' | 'goals' | 'review'
 
+// Order follows how often you open them, not how important they sound. Goals
+// are a monthly conversation, so they sit near the review, not at the front.
 const TABS: { id: Tab; label: string }[] = [
   { id: 'projects', label: 'Projects' },
   { id: 'next', label: 'Next' },
   { id: 'waiting', label: 'Waiting' },
   { id: 'inbox', label: 'Inbox' },
+  { id: 'goals', label: 'Goals' },
   { id: 'review', label: 'Review' },
 ]
 
@@ -59,6 +63,7 @@ export default function Shell() {
     next: gtd.items.filter((i) => i.status === 'next').length,
     waiting: gtd.items.filter((i) => i.status === 'waiting').length,
     inbox: gtd.items.filter((i) => i.status === 'inbox').length,
+    goals: gtd.goals.filter((g) => g.status === 'active').length,
     review: 0,
   }
 
@@ -68,6 +73,9 @@ export default function Shell() {
     projects: gtd.projects.some((p) => isStalled(gtd.items, p)),
     next: gtd.items.some(
       (i) => i.status === 'next' && i.due_date && daysUntil(i.due_date, today) < 0,
+    ),
+    goals: gtd.goals.some(
+      (g) => isGoalStalled(gtd.projects, g) || goalNeedsReview(g),
     ),
     review: gtd.lastReview === null || daysOld(gtd.lastReview) >= REVIEW_DUE_DAYS,
   }
@@ -107,6 +115,7 @@ export default function Shell() {
       {tab === 'next' && <NextTab gtd={gtd} />}
       {tab === 'waiting' && <WaitingTab gtd={gtd} />}
       {tab === 'inbox' && <InboxTab gtd={gtd} now={now} />}
+      {tab === 'goals' && <GoalsTab gtd={gtd} />}
       {tab === 'review' && <ReviewTab gtd={gtd} onGo={go} />}
     </div>
   )

@@ -1,4 +1,4 @@
-import type { Item, Project } from './supabase'
+import type { Goal, Horizon, Item, Project } from './supabase'
 import { daysOld, daysUntil, todayISO } from './age'
 
 /**
@@ -43,6 +43,62 @@ export function byUrgency(a: Item, b: Item): number {
   if (a.due_date) return -1
   if (b.due_date) return 1
   return a.created_at < b.created_at ? -1 : 1
+}
+
+/* ---------------------------------------------------------------- goals -- */
+
+export const HORIZONS: { id: Horizon; label: string; months: number }[] = [
+  { id: '3m', label: '3 month', months: 3 },
+  { id: '6m', label: '6 month', months: 6 },
+  { id: '12m', label: '12 month', months: 12 },
+]
+
+/**
+ * Horizons run on their own clocks. Dragging goals into the weekly review is
+ * how people start skipping the weekly review.
+ */
+export const GOAL_REVIEW_DAYS: Record<Horizon, number> = {
+  '3m': 30, // monthly
+  '6m': 90, // quarterly
+  '12m': 90,
+}
+
+/** Default deadline for a new goal, from its horizon. */
+export function targetDateFor(horizon: Horizon, from = new Date()): string {
+  const months = HORIZONS.find((h) => h.id === horizon)?.months ?? 3
+  const d = new Date(from)
+  d.setMonth(d.getMonth() + months)
+  return todayISO(d)
+}
+
+/** Live projects underneath a goal. */
+export function projectsFor(projects: Project[], goalId: string): Project[] {
+  return projects.filter((p) => p.goal_id === goalId && p.status === 'active')
+}
+
+/**
+ * The same test as a stalled project, one level up: a goal nothing is being
+ * done about is a wish. Breaking any link in goal → project → action lights up.
+ */
+export function isGoalStalled(projects: Project[], goal: Goal): boolean {
+  return goal.status === 'active' && projectsFor(projects, goal.id).length === 0
+}
+
+/** Whole weeks until the target date. Negative means the date has passed. */
+export function weeksLeft(target: string, today = todayISO()): number {
+  return Math.floor(daysUntil(target, today) / 7)
+}
+
+/** Goals nag on a monthly or quarterly clock, never a weekly one. */
+export function goalNeedsReview(goal: Goal): boolean {
+  if (goal.status !== 'active') return false
+  if (!goal.reviewed_at) return daysOld(goal.created_at) >= GOAL_REVIEW_DAYS[goal.horizon]
+  return daysOld(goal.reviewed_at) >= GOAL_REVIEW_DAYS[goal.horizon]
+}
+
+/** Active projects serving no goal. Not an error — plenty of work is upkeep. */
+export function unalignedProjects(projects: Project[]): Project[] {
+  return projects.filter((p) => p.status === 'active' && !p.goal_id)
 }
 
 /* --------------------------------------------------------------- review -- */

@@ -77,6 +77,49 @@ create trigger items_set_completed_at
   before insert or update on items
   for each row execute function set_completed_at();
 
+-- ------------------------------------------------------------------- goals --
+-- The horizon above projects. A goal is never ticked off directly: it is
+-- reached when the projects underneath it are done. Deliberately no
+-- completed-by-hand flag beyond an explicit outcome.
+
+create table if not exists goals (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name         text not null check (length(btrim(name)) > 0),
+  why          text,                       -- motivation decays; this revives it
+  horizon      text not null default '3m'
+                 check (horizon in ('3m', '6m', '12m')),
+  target_date  date,
+  status       text not null default 'active'
+                 check (status in ('active', 'achieved', 'dropped')),
+  reviewed_at  timestamptz,                -- goals run on their own clock
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists goals_user_created_idx
+  on goals (user_id, created_at desc);
+
+alter table goals enable row level security;
+
+drop policy if exists "own goals" on goals;
+create policy "own goals" on goals
+  for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists goals_set_updated_at on goals;
+create trigger goals_set_updated_at
+  before update on goals
+  for each row execute function set_updated_at();
+
+-- Projects hang off a goal. Nullable: plenty of real work is maintenance that
+-- serves no goal, and pretending otherwise just produces fake goals.
+alter table projects add column if not exists goal_id uuid references goals (id) on delete set null;
+
+create index if not exists projects_goal_idx on projects (goal_id) where goal_id is not null;
+
 -- ----------------------------------------------------------------- reviews --
 -- One row per completed weekly review, so the app can say how long it has been.
 

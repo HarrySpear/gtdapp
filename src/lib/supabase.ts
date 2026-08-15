@@ -37,8 +37,25 @@ export type Project = {
   description: string | null
   outcome: string | null
   status: ProjectStatus
+  goal_id: string | null
   reviewed_at: string | null
   completed_at: string | null
+  created_at: string
+}
+
+/** How far out the goal reaches. Anything longer is a vision, not a goal. */
+export type Horizon = '3m' | '6m' | '12m'
+
+export type GoalStatus = 'active' | 'achieved' | 'dropped'
+
+export type Goal = {
+  id: string
+  name: string
+  why: string | null
+  horizon: Horizon
+  target_date: string | null // 'YYYY-MM-DD'
+  status: GoalStatus
+  reviewed_at: string | null
   created_at: string
 }
 
@@ -46,4 +63,7 @@ export const ITEM_COLS =
   'id, title, status, project_id, context, due_date, waiting_on, notes, completed_at, created_at'
 
 export const PROJECT_COLS =
-  'id, name, description, outcome, status, reviewed_at, completed_at, created_at'
+  'id, name, description, outcome, status, goal_id, reviewed_at, completed_at, created_at'
+
+export const GOAL_COLS =
+  'id, name, why, horizon, target_date, status, reviewed_at, created_at'

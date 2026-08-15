@@ -180,6 +180,25 @@ function ProjectRow({ project, gtd }: { project: Project; gtd: Gtd }) {
           </label>
 
           <label className="field field-block">
+            <span>Serves goal</span>
+            <select
+              value={project.goal_id ?? ''}
+              onChange={(e) =>
+                void gtd.updateProject(project.id, { goal_id: e.target.value || null })
+              }
+            >
+              <option value="">— none, this is upkeep</option>
+              {gtd.goals
+                .filter((g) => g.status === 'active')
+                .map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+
+          <label className="field field-block">
             <span>Done looks like</span>
             <textarea
               rows={2}
