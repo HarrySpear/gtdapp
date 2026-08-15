@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import SignIn from './components/SignIn'
-import Inbox from './components/Inbox'
+import Shell from './components/Shell'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -20,5 +20,5 @@ export default function App() {
   }, [])
 
   if (!ready) return null
-  return session ? <Inbox /> : <SignIn />
+  return session ? <Shell /> : <SignIn />
 }

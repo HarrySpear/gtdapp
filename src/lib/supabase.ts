@@ -13,9 +13,37 @@ export const supabase = createClient(url, anonKey, {
   auth: { persistSession: true, autoRefreshToken: true },
 })
 
+/** 'someday' has no tab — it is the parking bay the weekly review empties. */
+export type ItemStatus = 'inbox' | 'next' | 'waiting' | 'someday' | 'done'
+
 export type Item = {
   id: string
   title: string
-  status: string
+  status: ItemStatus
+  project_id: string | null
+  context: string | null
+  due_date: string | null // 'YYYY-MM-DD'
+  waiting_on: string | null
+  notes: string | null
+  completed_at: string | null
   created_at: string
 }
+
+export type ProjectStatus = 'active' | 'someday' | 'done'
+
+export type Project = {
+  id: string
+  name: string
+  description: string | null
+  outcome: string | null
+  status: ProjectStatus
+  reviewed_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+export const ITEM_COLS =
+  'id, title, status, project_id, context, due_date, waiting_on, notes, completed_at, created_at'
+
+export const PROJECT_COLS =
+  'id, name, description, outcome, status, reviewed_at, completed_at, created_at'
